@@ -1,5 +1,6 @@
 ﻿using System;
 using Autofac;
+using Autofac.Analysis;
 using Autofac.Configuration;
 using Autofac.Features.OwnedInstances;
 using Serilog;
@@ -31,19 +32,27 @@ namespace ProfiledApplication
     }
 
     class G<T,U>
-    {        
+    {
+        public G(C c)
+        {
+        }
     }
 
     class Program
     {
         static void Main()
         {
-            Log.Logger = new LoggerConfiguration().WriteTo.LiterateConsole().CreateLogger();
+            var logger = new LoggerConfiguration()
+                .WriteTo
+                .LiterateConsole()
+                .WriteTo.Seq("http://localhost:5341/")
+                .MinimumLevel.Debug()
+                .CreateLogger();
 
             Console.WriteLine("Started.");
 
             var builder = new ContainerBuilder();
-            builder.RegisterModule(new ConfigurationSettingsReader());
+            builder.RegisterModule(new AnalysisModule(logger));
             builder.RegisterType<A>().SingleInstance();
             builder.RegisterType<B>().PropertiesAutowired(PropertyWiringOptions.AllowCircularDependencies);
             builder.RegisterType<C>().WithMetadata("M", 42).WithMetadata("N", "B!");
@@ -60,7 +69,7 @@ namespace ProfiledApplication
 
                 Console.WriteLine("Taking a nap...");
                 System.Threading.Thread.Sleep(5000);
-
+                    
                 using (var ls2 = container.BeginLifetimeScope())
                 {
                     var o = ls2.Resolve<C>();

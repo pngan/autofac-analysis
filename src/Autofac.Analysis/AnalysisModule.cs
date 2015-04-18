@@ -8,6 +8,7 @@ using Autofac.Analysis.Transport.Messages;
 using Autofac.Analysis.Transport.Model;
 using Autofac.Core;
 using Autofac.Core.Resolving;
+using Serilog;
 
 namespace Autofac.Analysis
 {
@@ -16,13 +17,21 @@ namespace Autofac.Analysis
         readonly ILifetimeScope _coreContainer, _sessionScope;
         readonly IWriteQueue _client;
         readonly ModelMapper _modelMapper = new ModelMapper();
+        private ILogger _logger;
+
+        public AnalysisModule(ILogger logger) : this()
+        {
+            _logger = logger;
+        }
 
         public AnalysisModule()
         {
+            _logger = Log.Logger;
             var client = new InProcQueue();
             var coreBuilder = new ContainerBuilder();
             coreBuilder.RegisterModule<CoreModule>();
             coreBuilder.RegisterModule<DisplayModule>();
+            coreBuilder.RegisterInstance(_logger).As<ILogger>().ExternallyOwned();
             coreBuilder.RegisterInstance(client).As<IReadQueue>();
             _coreContainer = coreBuilder.Build();
             _sessionScope = _coreContainer.BeginLifetimeScope("profiler-session");
